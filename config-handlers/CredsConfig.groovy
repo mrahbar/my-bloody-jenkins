@@ -3,57 +3,9 @@ import com.cloudbees.plugins.credentials.impl.UsernamePasswordCredentialsImpl
 import com.cloudbees.plugins.credentials.domains.Domain
 import com.cloudbees.plugins.credentials.SystemCredentialsProvider
 import com.cloudbees.plugins.credentials.CredentialsScope
-import com.cloudbees.jenkins.plugins.awscredentials.AWSCredentialsImpl
 import org.jenkinsci.plugins.plaincredentials.impl.StringCredentialsImpl
 import jenkins.model.Jenkins
 import hudson.util.Secret
-
-def asInt(value, defaultValue=0){
-    return value ? value.toInteger() : defaultValue
-}
-def asBoolean(value, defaultValue=false){
-    return value != null ? value.toBoolean() : defaultValue
-}
-
-def p4PassCred(config) {
-    config.with{
-        def p4cred = new org.jenkinsci.plugins.p4.credentials.P4PasswordImpl(
-            CredentialsScope.GLOBAL, 
-            id, 
-            description, 
-            p4port,
-            asBoolean(ssl) ? new org.jenkinsci.plugins.p4.credentials.TrustImpl(trust) : null, 
-            username, 
-            retry?.toString(),
-            timeout?.toString(), 
-            p4host, 
-            password
-        )
-        p4cred.allhosts = asBoolean(allhosts)
-        return p4cred
-    }
-}
-
-def p4TicketCred(config) {
-    config.with{
-        return new org.jenkinsci.plugins.p4.credentials.P4TicketImpl(
-            CredentialsScope.GLOBAL, 
-            id, 
-            description, 
-            p4port,
-            asBoolean(ssl) ? new org.jenkinsci.plugins.p4.credentials.TrustImpl(trust) : null, 
-            username, 
-            retry?.toString(),
-            timeout?.toString(),
-            p4host, 
-            new org.jenkinsci.plugins.p4.credentials.TicketModeImpl(
-                ticketValue ? 'ticketValueSet' : ticketPath ? 'ticketPathSet' : null,
-                ticketValue,
-                ticketPath
-            )
-        )
-    }
-}
 
 def sshKeyCred(config) {
     config.with{
@@ -176,10 +128,6 @@ def setup(config){
                 return certCred(credConfig)
             case 'gitlab-api-token':
                 return gitlabApiToken(credConfig)
-            case 'p4-pass':
-                return p4PassCred(credConfig)
-            case 'p4-ticket':
-                return p4TicketCred(credConfig)
             default:
                 return null
         }

@@ -1,6 +1,6 @@
 #! env python
-import requests
 import json
+import requests
 import re
 
 update_site_result = requests.get('https://updates.jenkins.io/current/update-center.json').text

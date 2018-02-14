@@ -1,48 +1,16 @@
 import hudson.security.LDAPSecurityRealm
-import hudson.security.ProjectMatrixAuthorizationStrategy
+import hudson.security.GlobalMatrixAuthorizationStrategy
 import hudson.security.HudsonPrivateSecurityRealm
 import jenkins.security.plugins.ldap.FromGroupSearchLDAPGroupMembershipStrategy
 import jenkins.security.plugins.ldap.FromUserRecordLDAPGroupMembershipStrategy
 import jenkins.model.Jenkins
 import hudson.model.Hudson
-import hudson.model.Item
 
 def asInt(value, defaultValue=0){
     return value ? value.toInteger() : defaultValue
 }
 def asBoolean(value, defaultValue=false){
     return value != null ? value.toBoolean() : defaultValue
-}
-
-def setupActiveDirectory(config){
-    config.with{
-        return new hudson.plugins.active_directory.ActiveDirectorySecurityRealm(
-            domain,
-            domains?.collect{ currentDomain ->
-                new hudson.plugins.active_directory.ActiveDirectoryDomain(
-                    currentDomain.name,
-                    currentDomain.servers?.join(','),
-                    currentDomain.site,
-                    currentDomain.bindName,
-                    currentDomain.bindPassword
-                )
-            },
-            site,
-            bindName,
-            bindPassword,
-            server,
-            groupLookupStrategy ? hudson.plugins.active_directory.GroupLookupStrategy.valueOf(groupLookupStrategy) : null,
-            asBoolean(removeIrrelevantGroups),
-            asBoolean(customDomain, null),
-            cache ? new hudson.plugins.active_directory.CacheConfiguration(
-                asInt(cache.size, 0),
-                asInt(cache.ttl, 0)
-            ) : null,
-            asBoolean(startTls, null),
-            tlsConfiguration ? hudson.plugins.active_directory.TlsConfiguration.valueOf(tlsConfiguration) : null,
-            jenkinsInternalUser ? new hudson.plugins.active_directory.ActiveDirectoryInternalUsersDatabase(jenkinsInternalUser) : null
-        )
-    }
 }
 
 def setupLdap(config){
@@ -77,6 +45,7 @@ def setupLdap(config){
         )
     }
 }
+
 def setupJenkinsDatabase(config){
     def currnetRealm = jenkins.model.Jenkins.instance.securityRealm
     def securityRealm = (currnetRealm instanceof HudsonPrivateSecurityRealm) ? currnetRealm : new HudsonPrivateSecurityRealm(false)
@@ -87,8 +56,12 @@ def setupJenkinsDatabase(config){
 }
 
 def createAuthorizationStrategy(config, adminUser){
-    def strategy = new ProjectMatrixAuthorizationStrategy()
-    strategy.add(Hudson.ADMINISTER, adminUser)
+    def strategy = new GlobalMatrixAuthorizationStrategy()
+
+    for (user in adminUser) {
+        strategy.add(Hudson.ADMINISTER, user)
+    }
+
     config?.permissions?.each{ principal, permissions ->
         for(p in permissions){
             try{
@@ -143,7 +116,6 @@ def setupSecurityOptions(config){
 
 def setup(config){
     config = config ?: [:]
-    def adminUser = config.adminUser
     def instance = Jenkins.getInstance()
 
     def realm
@@ -154,16 +126,14 @@ def setup(config){
         case 'jenkins_database':
             realm = setupJenkinsDatabase(config)
             break
-        case 'active_directory':
-            realm = setupActiveDirectory(config)
-            break
     }
     if(realm){
         instance.setSecurityRealm(realm)
-        def strategy = createAuthorizationStrategy(config, adminUser)
+        def strategy = createAuthorizationStrategy(config, config.adminUsers)
         instance.setAuthorizationStrategy(strategy)
         instance.save()
     }
+
     setupSecurityOptions(config.securityOptions)
 }
 

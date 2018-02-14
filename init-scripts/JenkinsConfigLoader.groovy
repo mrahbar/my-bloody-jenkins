@@ -10,61 +10,50 @@ def loadYamlConfig(filename){
 
 def handleConfig(handler, config){
     if(!config){
-        println "--> skipping ${handler} configuration"
+        println "[JenkinsConfigLoader] --> skipping ${handler} configuration"
         return
     }
-    println "--> Handling ${handler} configuration"
+    println "[JenkinsConfigLoader] --> Handling ${handler} configuration"
     try{
         evaluate(new File("/usr/share/jenkins/config-handlers/${handler}Config.groovy")).setup(config)
-        println "--> Handling ${handler} configuration... done"
+        println "[JenkinsConfigLoader] --> Handling ${handler} configuration... done"
     }catch(e){
-        println "--> Handling ${handler} configuration... error: ${e}"
+        println "[JenkinsConfigLoader] --> Handling ${handler} configuration... error: ${e}"
         e.printStackTrace()
     }
 }
 
-def getAdminUserName(){
-    return System.getenv()['JENKINS_ENV_ADMIN_USER']
+def masterUser = System.getenv()['JENKINS_ENV_INITIAL_MASTER_USER']
+if(!masterUser){
+    println "[JenkinsConfigLoader] JENKINS_ENV_INITIAL_MASTER_USER was not set. This is mandatory variable"
+}else{
+    storeAdminApiToken(masterUser, System.getenv()['TOKEN_FILE_LOCATION'])
 }
 
 def storeAdminApiToken(adminUser, filename){
     def adminUserApiToken = User.get(adminUser, true)?.getProperty(ApiTokenProperty)?.apiTokenInsecure
     if(adminUserApiToken){
-        new File(filename).withWriter{out -> out.println "${adminUser}:${adminUserApiToken}"}
+        new File(filename).withWriter{out -> out.println "[JenkinsConfigLoader] ${adminUser}:${adminUserApiToken}"}
     }
-}
-
-def adminUser = getAdminUserName()
-if(!adminUser){
-    println "JENKINS_ENV_ADMIN_USER was not set. This is mandatory variable"
-}else{
-    storeAdminApiToken(adminUser, System.getenv()['TOKEN_FILE_LOCATION'])
 }
 
 def configFileName = System.getenv()['CONFIG_FILE_LOCATION']
 
 if(!new File(configFileName).exists()) {
-    println "${configFileName} does not exist. Set variable JENKINS_ENV_CONFIG_YAML! Skipping configuration..."
+    println "[JenkinsConfigLoader] ${configFileName} does not exist. Set variable JENKINS_ENV_CONFIG_YAML! Skipping configuration..."
 } else {
     def jenkinsConfig = loadYamlConfig(configFileName)
-    // TODO: admin user should be global. Make it more generic....
-    jenkinsConfig.security?.adminUser = adminUser
+    println "[JenkinsConfigLoader] Loaded yaml config starting configs:"
 
-    // TODO: General config is using only environment variables
-    // Find a more elegant way to handle it 
     handleConfig('Proxy', jenkinsConfig.proxy)
     handleConfig('General', [general: true])
     handleConfig('EnvironmentVars', jenkinsConfig.environment)
     handleConfig('Creds', jenkinsConfig.credentials)
     handleConfig('Security', jenkinsConfig.security)
-    handleConfig('Clouds', jenkinsConfig.clouds)
     handleConfig('Notifiers', jenkinsConfig.notifiers)
     handleConfig('ScriptApproval', jenkinsConfig.script_approval)
-    handleConfig('Tools', jenkinsConfig.tools)
-    handleConfig('SonarQubeServers', jenkinsConfig.sonar_qube_servers)
-    handleConfig('Jira', jenkinsConfig.jira)
-    handleConfig('Checkmarx', jenkinsConfig.checkmarx)
     handleConfig('Gitlab', jenkinsConfig.gitlab)
     handleConfig('PipelineLibraries', jenkinsConfig.pipeline_libraries)
+    handleConfig('JobsFolder', jenkinsConfig.jobs_folder)
     handleConfig('SeedJobs', jenkinsConfig.seed_jobs)
 }

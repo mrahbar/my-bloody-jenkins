@@ -1,16 +1,4 @@
-# My Bloody Jenkins - An opinionated Jenkins Docker Image
-[![Build Status](https://travis-ci.org/odavid/my-bloody-jenkins.svg?branch=master)](https://travis-ci.org/odavid/my-bloody-jenkins)
-[![Docker Pulls](https://img.shields.io/docker/pulls/odavid/my-bloody-jenkins.svg)](https://hub.docker.com/r/odavid/my-bloody-jenkins/)
-
-## What's in the Box?
-*My Bloody Jenkins* is a re-distribution of the [Official LTS Jenkins Docker image](https://hub.docker.com/r/jenkins/jenkins/) bundled with most popular plugins and 
-ability to configure most aspects of Jenkins from a **simple** and **single source of truth** represented as YAML.
-
-The image can get the configuration from several data sources such as: File, S3, Environment Variable, HTTP, Kubernetes ConfigMap and Kubernetes Secret.
-
-The image supports "Watching" configuration changes and applying them immedately without restarting jenkins.
-
-The image is "Battle Proven" and serves as the baseground for several Jenkins deployments in production.
+# Cloud Jenkins - An opinionated Jenkins Docker Image
 
 ## Features
 * Configuration Coverage:
@@ -31,15 +19,10 @@ The image is "Battle Proven" and serves as the baseground for several Jenkins de
 * Automated Re-Configure based on configuration data change without restarts
 * Supports Dynamic Host IP configuration passed to clouds when Jenkins is running in a cluster
 
-## Why Use the term "Bloody"?
-The term "My Bloody Jenkins" came from the fact that I tried to put all my "battle" experience, (i.e. blood, sweat and tears) within the image.
-I just thought it is a "catchy" name for this kind of a repository.
-
-
 ## Releases
 See [Changes](CHANGELOG.md)
 
-Docker Images are pushed to [Docker Hub](https://hub.docker.com/r/odavid/my-bloody-jenkins/)
+Docker Images are pushed to [Docker Hub](https://hub.docker.com/r/endianogino/cloud-jenkins/)
 
 Each release is a git tag v$LTS_VERSION-$INCREMENT where:
 
@@ -55,13 +38,13 @@ Each master commit, will be tagged as latest
 
 ```bash
 # get the latest release
-docker pull odavid/my-bloody-jenkins:lts
+docker pull endianogino/cloud-jenkins:lts
 # get the latest 2.73.3 LTS
-docker pull odavid/my-bloody-jenkins:2.73.3
+docker pull endianogino/cloud-jenkins:2.73.3
 # get a concrete 2.73.3 release
-docker pull odavid/my-bloody-jenkins:2.73.3-6
+docker pull endianogino/cloud-jenkins:2.73.3-6
 # get the latest unstable image
-docker pull odavid/my-bloody-jenkins
+docker pull endianogino/cloud-jenkins
 ```
 
 ## Some Usage Examples
@@ -162,28 +145,6 @@ security:
     readTimeout: 60000 # default = 60000
     displayNameAttr: cn
     emailAttr: email
-```
-
-```yaml
-# active_directory - active_directory configuration must be provided
-security:
-    realm: active_directory
-    domains:
-      - name: corp.mydomain.com
-        servers:
-          - dc1.corp.mydomain.com
-          - dc2.corp.mydomain.com
-        site: optional-site
-        bindName: CN=user,OU=myorg,OU=User,DC=mydoain,DC=com
-        bindPassword: secret
-    groupLookupStrategy: AUTO # AUTO, RECURSIVE, CHAIN, TOKENGROUPS
-    removeIrrelevantGroups: false
-    cache:
-      size: 500
-      ttl: 30
-    startTls: false
-    tlsConfiguration: TRUST_ALL_CERTIFICATES # TRUST_ALL_CERTIFICATES, JDK_TRUSTSTORE
-    jenkinsInternalUser: my-none-ad-user #
 ```
 
 ```yaml
@@ -591,7 +552,7 @@ seed_jobs:
   SeedJob:
     source:
       # git repo where of the seed job
-      remote: git@github.com:odavid/my-bloody-jenkins.git
+      remote: git@github.com:endianogino/cloud-jenkins.git
       credentialsId: gitsshkey
       branch: 'master'
     triggers:

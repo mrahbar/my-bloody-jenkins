@@ -7,25 +7,41 @@ def asBoolean(value, defaultValue=false){
 
 
 def seedJobConfig(config){
+    def env = System.getenv()
     config.with{
-        def job = jenkins.model.Jenkins.instance.getItem(name)
+        def job
+        if (!(folder == null || folder.empty)) {
+            job = jenkins.model.Jenkins.instance.getItemByFullName(folder+"/"+name)
+        } else {
+            job = jenkins.model.Jenkins.instance.getItem(name)
+        }
+
         def exists = (job != null)
         if(!exists){
-            job = jenkins.model.Jenkins.instance.createProject(org.jenkinsci.plugins.workflow.job.WorkflowJob, name)
+            if (!(folder == null || folder.empty)) {
+                folderInstance = jenkins.model.Jenkins.instance.getItemByFullName(folder)
+                job = folderInstance.createProject(org.jenkinsci.plugins.workflow.job.WorkflowJob, name)
+            } else {
+                job = jenkins.model.Jenkins.instance.createProject(org.jenkinsci.plugins.workflow.job.WorkflowJob, name)
+            }
         }
-        def scm = new hudson.plugins.git.GitSCM(
-            hudson.plugins.git.GitSCM.createRepoList(
-                source?.remote, 
-                source?.credentialsId
-            ), 
-            source?.branch ? [new hudson.plugins.git.BranchSpec("*/${source?.branch}")] : [], 
-            null, 
-            null, 
-            null, 
-            null, 
-            null
-        )
-        job.definition = new org.jenkinsci.plugins.workflow.cps.CpsScmFlowDefinition(scm, pipeline)
+        if (source) {
+            def scm = new hudson.plugins.git.GitSCM(
+                hudson.plugins.git.GitSCM.createRepoList(
+                    source?.remote,
+                    source?.credentialsId
+                ),
+                source?.branch ? [new hudson.plugins.git.BranchSpec("*/${source?.branch}")] : [],
+                null,
+                null,
+                null,
+                null,
+                null
+            )
+            job.definition = new org.jenkinsci.plugins.workflow.cps.CpsScmFlowDefinition(scm, pipeline)
+        } else if (new File(env['JOB_PIPELINE_LOCATION']+"/"+pipeline).exists()) {
+            job.definition = new org.jenkinsci.plugins.workflow.cps.CpsFlowDefinition(new File(env['JOB_PIPELINE_LOCATION']+"/"+pipeline).text, true)
+        }
         job.concurrentBuild = false
         triggers?.collect{ type, expression ->
             switch(type){

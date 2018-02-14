@@ -52,9 +52,13 @@ if [[ $# -lt 1 ]] || [[ "$1" == "-"* ]]; then
 
     # This is important if you let docker create the host mounted volumes.
     # We need to make sure they will be owned by the jenkins user
-    mkdir -p /jenkins-workspace-home/workspace
-    if [ "jenkins" != "$(stat -c %U /jenkins-workspace-home/workspace)" ]; then
-        chown -R jenkins:jenkins /jenkins-workspace-home
+    mkdir -p ${JENKINS_WORKSPACE_HOME}
+    if [ "jenkins" != "$(stat -c %U ${JENKINS_WORKSPACE_HOME})" ]; then
+        chown -R jenkins:jenkins ${JENKINS_WORKSPACE_HOME}
+    fi
+    mkdir -p ${JENKINS_PERSISTANT_STATE}
+    if [ "jenkins" != "$(stat -c %U ${JENKINS_PERSISTANT_STATE})" ]; then
+        chown -R jenkins:jenkins ${JENKINS_PERSISTANT_STATE}
     fi
     if [ "jenkins" != "$(stat -c %U ${JENKINS_HOME})" ]; then
         chown -R jenkins:jenkins $JENKINS_HOME
@@ -62,10 +66,27 @@ if [[ $# -lt 1 ]] || [[ "$1" == "-"* ]]; then
 
     # To enable docker cloud based on docker socket,
     # we need to add jenkins user to the docker group
-    if [ -S /var/run/docker.sock ]; then
-        DOCKER_SOCKET_OWNER_GROUP_ID=$(stat -c %g /var/run/docker.sock)
-        groupadd -for -g ${DOCKER_SOCKET_OWNER_GROUP_ID} docker
-        id jenkins -G -n | grep docker || usermod -aG docker jenkins
+    if [ "$DOCKER_BIND_SOCK" == 'true' ] && [ -S /var/run/docker.sock ]; then
+        JENKINS_USER="jenkins"
+        DOCKER_GROUP="docker"
+        DOCKER_GID=$(stat -c %g /var/run/docker.sock)
+
+        if getent group $DOCKER_GROUP; then
+            EXISTING_DOCKER_GID=$(getent group $DOCKER_GROUP | awk -F: '{print $3}')
+            if [[ "$EXISTING_DOCKER_GID" -ne "$DOCKER_GID" ]];then
+              echo "Existing group $DOCKER_GROUP ($EXISTING_DOCKER_GID) has not gid of $DOCKER_GID. Recreating...";
+              groupdel $DOCKER_GROUP
+              addgroup -g $DOCKER_GID $DOCKER_GROUP
+            fi
+        else
+            echo "Creating group $DOCKER_GROUP with gid $DOCKER_GID"
+            addgroup --g $DOCKER_GID $DOCKER_GROUP
+        fi
+
+        echo "Adding user $JENKINS_USER to group $DOCKER_GROUP"
+        adduser $JENKINS_USER $DOCKER_GROUP
+    else
+        echo "Skipping docker sock binding"
     fi
 
     # This changes the actual command to run the original jenkins entrypoint
